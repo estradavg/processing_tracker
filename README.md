@@ -10,5 +10,10 @@ A computer vision program that tracks an object to move a circle inside a box on
 1. Open and run the processing_constrain.pde file using the Processing Development Environment.
 2. Run the main.py inside the constrain_tracker folder.
 
+demo: https://youtu.be/YAe-rv5XPXg
+
 # Note
-By default the program tracks a green object, but you can play changing the desired color to be tracked adjusting its HSV values with the code inside the calibrate_hsv folder. For this, just run the main.py inside the calibrate_hsv folder. Use the trackbars for adjusting the masks and filters to reach the desired color. Save those HSV values and put them in the main.py inside the constrain_tracker folder.
+By default the program tracks a green object, but you can play changing the desired color to be tracked adjusting its HSV values. For this:
+
+1. Run the main.py inside the calibrate_hsv folder. Use the trackbars for adjusting the masks and filters to reach the desired color.
+2. Save the HSV values and put them in the main.py inside the constrain_tracker folder.
