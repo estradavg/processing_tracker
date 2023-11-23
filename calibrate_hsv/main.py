@@ -1,8 +1,7 @@
-from asyncio.windows_events import NULL
 from itertools import count
 from sre_constants import SUCCESS
 import cvzone
-from cvzone import ColorFinder
+from cvzone.ColorModule import ColorFinder
 import cv2
 import socket
 

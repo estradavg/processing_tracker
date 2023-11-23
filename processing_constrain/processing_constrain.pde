@@ -26,7 +26,7 @@ void setup() {
   noStroke(); 
   ellipseMode(RADIUS);
   rectMode(CORNERS);
-  s = new Server(this, 12000);
+  s = new Server(this, 12001);
 }
 
 void draw() { 
