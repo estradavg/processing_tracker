@@ -1,5 +1,3 @@
-# from asyncio import NULL
-from itertools import count
 from sre_constants import SUCCESS
 import cvzone
 from cvzone.ColorModule import ColorFinder
