@@ -7,10 +7,18 @@ A computer vision program that tracks an object to move a circle inside a box on
 3. `pip install cvzone`. Refer to the [cvzone](https://github.com/cvzone/cvzone) repository for better understanding and usage.
 
 # Usage
+**Python:**
 1. Open and run the processing_constrain.pde file using the Processing Development Environment.
 2. Run the main.py inside the constrain_tracker folder.
 
+**C++:**
+1. Open and run the processing_constrain.pde file using the Processing Development Environment.
+2. Run the main.out inside the constrain_tracker folder.
+
 demo: https://youtu.be/YAe-rv5XPXg
+
+# Compiling (g++)
+`g++ main.cpp -I/usr/include/opencv4/ -lopencv_core -lopencv_videoio -lopencv_highgui -lopencv_imgproc`
 
 # Note
 By default the program tracks a green object, but you can play changing the desired color to be tracked adjusting its HSV values. For this:
