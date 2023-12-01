@@ -1,42 +1,39 @@
-#include <opencv2/core.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
-#include <iostream>
-#include <stdio.h>
-int main(int, char**)
-{
-    cv::Mat frame;
-    //--- INITIALIZE VIDEOCAPTURE
-    cv::VideoCapture cap;
-    int deviceID = 0;             // 0 = open default camera
-    int apiID = cv::CAP_ANY;      // 0 = autodetect default API
-    // open selected camera using selected API
-    cap.open(deviceID, apiID);
-    // check if we succeeded
+#include <opencv2/opencv.hpp>
+
+int main() {
+    cv::VideoCapture cap(0, cv::CAP_V4L);  // Assuming you want to capture from the default camera
     if (!cap.isOpened()) {
-        std::cerr << "ERROR! Unable to open camera\n";
+        std::cerr << "Error: Could not open camera." << std::endl;
         return -1;
     }
-    //--- GRAB AND WRITE LOOP
-    std::cout << "Start grabbing" << std::endl
-        << "Press any key to terminate" << std::endl;
-    for (;;)
-    {
-        // wait for a new frame from camera and store it into 'frame'
-        cap.set(cv::CAP_PROP_FRAME_WIDTH, 1080);
-        cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
-        
-        cap.read(frame);
-        // check if we succeeded
-        if (frame.empty()) {
-            std::cerr << "ERROR! blank frame grabbed\n";
+
+    // Set the width and height
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 1080);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
+
+    // Check if the settings were applied successfully
+    double width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    double height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
+
+    // std::cout << "Width: " << width << ", Height: " << height << std::endl;
+
+    while (true) {
+        cv::Mat frame;
+        bool success = cap.read(frame);
+
+        if (!success) {
+            std::cerr << "Error: Could not read frame from the camera." << std::endl;
             break;
         }
-        // show live and wait for a key with timeout long enough to show images
-        imshow("Live", frame);
-        if (cv::waitKey(5) >= 0)
+
+        // Display the frame
+        cv::imshow("Webcam", frame);
+
+        // Break the loop if the 'ESC' key is pressed
+        if (cv::waitKey(1) == 27) {
             break;
+        }
     }
-    // the camera will be deinitialized automatically in VideoCapture destructor
+
     return 0;
 }
