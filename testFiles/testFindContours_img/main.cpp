@@ -34,7 +34,7 @@ int main() {
     cv::drawContours(image_copy, contours, -1, cv::Scalar(0, 0, 255), 2);
     
 
-    // show image
+    // // show image
     cv::imshow("Simple approximation", image_copy);
     cv::waitKey(0);
     
