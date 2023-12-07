@@ -22,7 +22,7 @@ public static String removeLastChar(String s) {
 }
 
 void setup() {
-  size(1080, 720);
+  size(1280, 720);
   noStroke(); 
   ellipseMode(RADIUS);
   rectMode(CORNERS);
@@ -38,7 +38,7 @@ void draw() {
     y = c.readStringUntil(byte('\n'));
     x = removeLastChar(x);
     y = removeLastChar(y);
-    numberx = 1080-Integer.valueOf(x);
+    numberx = 1280-Integer.valueOf(x);
     numbery = 720-Integer.valueOf(y);
     println("(" + numberx + " " + numbery + ")");
   }

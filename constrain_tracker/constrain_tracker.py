@@ -3,11 +3,15 @@ import cvzone
 from cvzone.ColorModule import ColorFinder
 import cv2
 import socket
+import numpy as np
 
+cap = cv2.VideoCapture(0, cv2.CAP_V4L)
 
-cap = cv2.VideoCapture(0)
+if not cap.isOpened():
+	raise Exception("Could not open video device")
+
 cap.open(0)
-cap.set(3, 1080)
+cap.set(3, 1280)
 cap.set(4, 720)
 
 succes, img = cap.read()
