@@ -1,128 +1,30 @@
-#include <opencv2/opencv.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/videoio.hpp>
-#include <opencv2/highgui.hpp>
-#include <functional>
 #include <iostream>
-#include <stdio.h>
-#include <string>
-#include <tuple>
-#include <map>
-
+#include <opencv2/opencv.hpp>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 #include <sstream>
 #include <iomanip>
-#include <vector>
-#include <cmath>
-#include <cstdlib>
-#include <cstring>
-#include <arpa/inet.h>
-#include <unistd.h>
 
-std::tuple<cv::Mat, cv::Mat> update(cv::Mat img, std::map<std::string, int> myColor = {}) {
-    cv::Mat imgColor;
-    cv::Mat mask;
-
-    if (myColor.empty()) {
-        // Handle the case when myColor is not provided
-        return std::make_tuple(imgColor, mask);
-    }
-
-    cv::Mat imgHSV;
-    cv::cvtColor(img, imgHSV, cv::COLOR_BGR2HSV);
-
-    cv::Scalar lower(myColor["hmin"], myColor["smin"], myColor["vmin"]);
-    cv::Scalar upper(myColor["hmax"], myColor["smax"], myColor["vmax"]);
-
-    cv::inRange(imgHSV, lower, upper, mask);
-    cv::bitwise_and(img, img, imgColor, mask);
-    
-    std::cout << "Succes 1" << std::endl;
-
-    return std::make_tuple(imgColor, mask);
-}
-
-
-std::tuple<cv::Mat, std::vector<std::map<std::string, cv::Mat>>> findContours(cv::Mat img, cv::Mat imgPre,
-    double minArea = 1000, double maxArea = std::numeric_limits<double>::infinity(),
-    bool sort = true, std::vector<int> filter = {}, bool drawCon = true,
-    cv::Scalar c = cv::Scalar(255, 0, 0), cv::Scalar ct = cv::Scalar(255, 0, 255),
-    int retrType = cv::RETR_EXTERNAL, int approxType = cv::CHAIN_APPROX_NONE) {
-
-    std::vector<std::map<std::string, cv::Mat>> conFound;
-    cv::Mat imgContours = img.clone();
-    std::vector<std::vector<cv::Point>> contours;
-    std::vector<cv::Vec4i> hierarchy;
-
-    cv::findContours(imgPre, contours, hierarchy, retrType, approxType);
-
-    for (const auto& cnt : contours) {
-        double area = cv::contourArea(cnt);
-        if (minArea < area && area < maxArea) {
-            double peri = cv::arcLength(cnt, true);
-            std::vector<cv::Point> approx;
-            cv::approxPolyDP(cnt, approx, 0.02 * peri, true);
-
-            if (filter.empty() || approx.size() == filter[0]) {
-                if (drawCon) {
-                    cv::drawContours(imgContours, std::vector<std::vector<cv::Point>>{cnt}, -1, c, 3);
-                    cv::Rect boundingRect = cv::boundingRect(approx);
-                    cv::putText(imgContours, std::to_string(approx.size()), cv::Point(boundingRect.x, boundingRect.y - 10),
-                        cv::FONT_HERSHEY_SIMPLEX, 0.5, ct, 2);
-                }
-
-                int x, y, w, h;
-                cv::Rect boundingRect = cv::boundingRect(approx);
-                x = boundingRect.x;
-                y = boundingRect.y;
-                w = boundingRect.width;
-                h = boundingRect.height;
-
-                int cx = x + (w / 2);
-                int cy = y + (h / 2);
-
-                cv::rectangle(imgContours, cv::Point(x, y), cv::Point(x + w, y + h), c, 2);
-                cv::circle(imgContours, cv::Point(cx, cy), 5, c, cv::FILLED);
-
-                conFound.push_back({{"cnt", cv::Mat(cnt)}, {"area", cv::Mat(std::vector<double>{area})},
-                                    {"bbox", cv::Mat(std::vector<int>{x, y, w, h})},
-                                    {"center", cv::Mat(std::vector<int>{cx, cy})}});
-            }
-        }
-    }
-
-    if (sort) {
-        std::sort(conFound.begin(), conFound.end(), [](const auto& a, const auto& b) -> bool {
-            return a.at("area").template at<double>(0, 0) > b.at("area").template at<double>(0, 0);
-        });
-    }
-
-    return std::make_tuple(imgContours, conFound);
-}
-
-int main() 
-{
-    cv::VideoCapture cap(0, cv::CAP_V4L); 
+int main() {
+    cv::VideoCapture cap(0, cv::CAP_V4L);
     if (!cap.isOpened()) {
         std::cerr << "Error: Could not open camera." << std::endl;
         return -1;
     }
 
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 1080);
+    // Set the width and height
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 1280);
     cap.set(cv::CAP_PROP_FRAME_HEIGHT, 720);
 
-    // Capture the first frame
-    cv::Mat img;
-    bool success = cap.read(img);
-    if (!success) {
-        std::cerr << "Error: Could not read frame from the camera." << std::endl;
-        return -1;
-    }
+    // Check if the settings were applied successfully
+    int width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
+    int height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
 
-    double h = 1280;
-    double w = 720;
-
-    std::map<std::string, int> hsvVals = {{"hmin", 37}, {"smin", 34}, {"vmin", 0},
-                                          {"hmax", 105}, {"smax", 255}, {"vmax", 255}};
+    // HSV color values for tracking (adjust these based on your object's color)
+    int hMin = 0, sMin = 100, vMin = 100;
+    int hMax = 179, sMax = 255, vMax = 255;
 
     // Socket variables
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -142,45 +44,83 @@ int main()
         return -1;
     }
 
-    // Main loop
     while (true) {
-        if (!cap.read(img)) {
+        cv::Mat image;
+        if (!cap.read(image)) {
             std::cerr << "Error: Could not read frame from the camera." << std::endl;
             break;
         }
-        cv::Mat imgColor, mask;
-        // std::tie(imgColor, mask) = update(img, hsvVals);
-        
-        auto [imgContour, contour] = findContours(img, mask);
 
-        if (!contour.empty()) {
-            double centerX = contour[0]["center"].at<int>(0);
-            double centerY = h - contour[0]["center"].at<int>(1);
-            int area = contour[0]["area"].at<int>(0);
+        // Convert image to HSV color space
+        cv::Mat hsvImage;
+        cv::cvtColor(image, hsvImage, cv::COLOR_BGR2HSV);
 
-            std::cout << "Data: " << centerX << ", " << centerY << ", " << area << std::endl;
+        // Threshold based on HSV values
+        cv::Mat mask;
+        cv::inRange(hsvImage, cv::Scalar(hMin, sMin, vMin), cv::Scalar(hMax, sMax, vMax), mask);
 
-            if (centerX != 0 && centerY != 0) {
-                std::ostringstream dataStream;
-                dataStream << std::fixed << std::setprecision(2) << centerX << "\n" << centerY << "\n";
-                std::string data = dataStream.str();
+        // Find contours on the binary image
+        std::vector<std::vector<cv::Point>> contours;
+        std::vector<cv::Vec4i> hierarchy;
+        cv::findContours(mask.clone(), contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
-                send(clientSocket, data.c_str(), data.size(), 0);
+        // Define minimum and maximum area
+        double minArea = 1000.0;
+        double maxArea = std::numeric_limits<double>::infinity();
+
+        cv::Mat image_contours = image.clone();
+
+        for (const auto& contour : contours) {
+            double area = cv::contourArea(contour);
+
+            if (minArea < area && area < maxArea) {
+                double peri = cv::arcLength(contour, 1);
+                std::vector<cv::Point> approx;
+                cv::approxPolyDP(contour, approx, 0.02 * peri, 1);
+                
+                // Draw contours on the original image
+                cv::drawContours(image_contours,contours, -1, cv::Scalar(255, 0, 0), 3);
+                cv::Rect boundingRect = cv::boundingRect(approx);
+
+                int x, y, w, h;
+                x = boundingRect.x;
+                y = boundingRect.y;
+                w = boundingRect.width;
+                h = boundingRect.height;
+
+                int cx = x + (w / 2);
+                int cy = y + (h / 2);
+
+                cv::rectangle(image_contours, cv::Point(x, y), cv::Point(x + w, y + h), cv::Scalar(255, 0, 0), 2);
+                cv::circle(image_contours, cv::Point(cx, cy), 5, cv::Scalar(255, 0, 0), cv::FILLED);
+
+                std::cout << "Center X: " << cx << ", Center Y: " << cy << std::endl;
+                
+                if (cx != 0 && cy != 0) {
+                    std::ostringstream dataStream;
+                    dataStream << std::fixed << std::setprecision(2) << cx << "\n" << height - cy << "\n";
+                    std::string data = dataStream.str();
+
+                    ssize_t sentBytes = send(clientSocket, data.c_str(), data.size(), 0);
+
+                    if (sentBytes == -1) {
+                        std::cerr << "Error: Could not send data." << std::endl;
+                        close(clientSocket);
+                        return -1;
+                    }
+                }
             }
+            
         }
 
-        cv::Mat imgStack;  // Implement the stackImages logic
-        cv::imshow("Image", imgStack);
-        
+        // Display the actual frame (image)
+        cv::imshow("Image", image_contours);
+
         // Break the loop if the 'ESC' key is pressed
         if (cv::waitKey(1) == 27) {
             break;
         }
-        
     }
-
-    // Close the socket
-    close(clientSocket);
 
     return 0;
 }
